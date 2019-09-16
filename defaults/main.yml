@@ -1,0 +1,5 @@
+---
+# defaults file for ssh_admin_key_service
+ssh_admin_key_service_allow_group: "wheel"
+ssh_admin_key_service_name: "ssh_add_root"
+ssh_admin_key_service_keypath: "/root/.ssh/id_rsa_root"

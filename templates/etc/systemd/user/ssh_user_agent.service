@@ -1,0 +1,12 @@
+[Unit]
+Description=SSH key agent
+
+[Service]
+Type=simple
+Environment=SSH_AUTH_SOCK=/tmp/ssh-agent.%u.socket
+ExecStartPre=-/usr/bin/rm -f "${SSH_AUTH_SOCK}"
+ExecStart=/usr/bin/ssh-agent -D -a "${SSH_AUTH_SOCK}"
+SuccessExitStatus=2
+
+[Install]
+WantedBy=default.target

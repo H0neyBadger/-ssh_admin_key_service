@@ -1,0 +1,12 @@
+[Unit]
+Description=Add root key to user %i agent 
+
+[Service]
+Type=oneshot
+Environment=SSH_AUTH_SOCK=/tmp/ssh-agent.%i.socket
+ExecStart=/usr/bin/ssh-add {{ ssh_admin_key_service_keypath }}
+SELinuxContext=system_u:system_r:admin_ssh_add_exec_t:s0-s0:c0.c1023
+
+[Install]
+WantedBy=default.target
+

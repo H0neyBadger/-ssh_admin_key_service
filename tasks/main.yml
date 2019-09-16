@@ -1,0 +1,92 @@
+---
+# tasks file for ssh_admin_key_service
+
+# Use a custom selinux policy
+# to confine all users including root
+- name: "Copy ssh key SELinux policy"
+  copy:
+    src: "admin_ssh_add.te"
+    dest: "/root/admin_ssh_add.te"
+    owner: "root"
+    group: "root"
+    mode: "0400"
+  become: true
+
+# man audit2allow
+- name: "Build selinux ssh key .mod file"
+  command: "checkmodule -M -m -o /root/admin_ssh_add.mod /root/admin_ssh_add.te"
+  args:
+    creates: "/root/admin_ssh_add.mod"
+  become: true
+
+- name: "Build selinux ssh key .pp file"
+  command: "semodule_package -o /root/admin_ssh_add.pp -m /root/admin_ssh_add.mod"
+  args:
+    creates: "/root/admin_ssh_add.pp"
+  become: true
+
+- name: "Import SELinux module"
+  command: "semodule -i /root/admin_ssh_add.pp"
+  become: true
+
+- name: "Remove SELinux modules tmp files"
+  file:
+    state: "absent"
+    path: "{{ item }}"
+  become: true
+  loop: 
+    - "/root/admin_ssh_add.pp"
+    - "/root/admin_ssh_add.mod"
+    - "/root/admin_ssh_add.te"
+
+- name: "Deploy systemd --user ssh_user_agent service"
+  template:
+    src: "etc/systemd/user/ssh_user_agent.service"
+    dest: "/etc/systemd/user/ssh_user_agent.service"
+    owner: "root"
+    group: "root"
+    mode: "o-xw"
+  become: true
+
+- name: "Reload systemd --user"
+  systemd:
+    scope: 'user'
+    daemon_reload: true
+  #become: true
+
+- name: "Deploy systemd ssh_add service"
+  template:
+    src: "etc/systemd/system/admin_ssh_add@.service"
+    dest: "/etc/systemd/system/{{ ssh_admin_key_service_name }}@.service"
+    owner: "root"
+    group: "root"
+    mode: "o-xw"
+  become: true
+
+- name: "Reload systemd"
+  systemd:
+    daemon_reload: true
+  become: true
+
+- name: "Deploy polkit rule"
+  template:
+    src: "etc/polkit-1/rules.d/99-ssh_admin_key_service.rules"
+    dest: "/etc/polkit-1/rules.d/99-{{ ssh_admin_key_service_name }}.rules"
+    owner: "root"
+    group: "root"
+    mode: "o-xw"
+  become: true
+
+- name: "Deploy ssh key"
+  copy:
+    # the key should be store
+    # in clear text form
+    src: "id_rsa"
+    dest: "{{ ssh_admin_key_service_keypath }}"
+    owner: "root"
+    group: "root"
+    mode: '0400'
+    setype: "admin_ssh_add_t"
+  become: true
+
+
