@@ -3,3 +3,5 @@
 ssh_admin_key_service_allow_group: "wheel"
 ssh_admin_key_service_name: "ssh_add_root"
 ssh_admin_key_service_keypath: "/root/.ssh/id_rsa_root"
+ssh_admin_key_service_id: "{{ ssh_admin_key_service_keypath | basename }}"
+ssh_admin_key_service_setype: "{{ 'admin_ssh_add_' + ssh_admin_key_service_id + '_t' | replace(' ', '_') }}"

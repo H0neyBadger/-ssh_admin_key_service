@@ -4,9 +4,9 @@
 # Use a custom selinux policy
 # to confine all users including root
 - name: "Copy ssh key SELinux policy"
-  copy:
-    src: "admin_ssh_add.te"
-    dest: "/root/admin_ssh_add.te"
+  template:
+    src: "admin_ssh_add.te.j2"
+    dest: "{{ ('/root/admin_ssh_add_' + ssh_admin_key_service_id + '.te') | quote }}"
     owner: "root"
     group: "root"
     mode: "0400"
@@ -14,19 +14,25 @@
 
 # man audit2allow
 - name: "Build selinux ssh key .mod file"
-  command: "checkmodule -M -m -o /root/admin_ssh_add.mod /root/admin_ssh_add.te"
+  command: >
+    checkmodule -M -m -o
+    {{ ('/root/admin_ssh_add_' + ssh_admin_key_service_id + '.mod') | quote }}
+    {{ ('/root/admin_ssh_add_' + ssh_admin_key_service_id + '.te') | quote }}
   args:
     creates: "/root/admin_ssh_add.mod"
   become: true
 
 - name: "Build selinux ssh key .pp file"
-  command: "semodule_package -o /root/admin_ssh_add.pp -m /root/admin_ssh_add.mod"
+  command: >
+    semodule_package -o \
+    {{ ('/root/admin_ssh_add_' + ssh_admin_key_service_id + '.pp') | quote }}
+    -m {{ ('/root/admin_ssh_add_' + ssh_admin_key_service_id + '.mod') | quote }}
   args:
     creates: "/root/admin_ssh_add.pp"
   become: true
 
 - name: "Import SELinux module"
-  command: "semodule -i /root/admin_ssh_add.pp"
+  command: "semodule -i {{ ('/root/admin_ssh_add_' + ssh_admin_key_service_id + '.pp') | quote }}"
   become: true
 
 - name: "Remove SELinux modules tmp files"
@@ -35,9 +41,9 @@
     path: "{{ item }}"
   become: true
   loop: 
-    - "/root/admin_ssh_add.pp"
-    - "/root/admin_ssh_add.mod"
-    - "/root/admin_ssh_add.te"
+    - "{{ ('/root/admin_ssh_add_' + ssh_admin_key_service_id + '.pp') | quote }}"
+    - "{{ ('/root/admin_ssh_add_' + ssh_admin_key_service_id + '.mod') | quote }}"
+    - "{{ ('/root/admin_ssh_add_' + ssh_admin_key_service_id + '.te') | quote }}"
 
 - name: "Deploy systemd --user ssh_user_agent service"
   template:
@@ -77,6 +83,24 @@
     mode: "o-xw"
   become: true
 
+- name: "Build .ssh key folder"
+  file:
+    path: "{{ ssh_admin_key_service_keypath | dirname }}"
+    state: "directory"
+    owner: "root"
+    group: "root"
+    mode: '0700'
+  become: true
+
+# due to selinux rules the only 
+# way to edit the ssh key is by 
+# deletion and addition 
+- name: "Remove the current ssh key"
+  file:
+    path: "{{ ssh_admin_key_service_keypath }}"
+    state: "absent"
+  become: true
+
 - name: "Deploy ssh key"
   copy:
     # the key should be store
@@ -86,7 +110,7 @@
     owner: "root"
     group: "root"
     mode: '0400'
-    setype: "admin_ssh_add_t"
+    setype: "{{ ssh_admin_key_service_setype }}"
   become: true
 
 

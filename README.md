@@ -1,38 +1,52 @@
-Role Name
-=========
+ssh_admin_key_service
+=====================
 
-A brief description of the role goes here.
+An ansible role to deploy and secure an ssh key from root user
 
 Requirements
 ------------
 
-Any pre-requisites that may not be covered by Ansible itself or the role should be mentioned here. For instance, if the role uses the EC2 module, it may be a good idea to mention in this section that the boto package is required.
+* SElinux in enforcing mode
+* systemd --user enabled
+* polkit
+* an ssh key in role file ***files/id_rsa***
 
 Role Variables
 --------------
 
-A description of the settable variables for this role should go here, including any variables that are in defaults/main.yml, vars/main.yml, and any variables that can/should be set via parameters to the role. Any variables that are read from other roles and/or the global scope (ie. hostvars, group vars, etc.) should be mentioned here as well.
+* ssh_admin_key_service_allow_group: "wheel", the default group allowed to 
+* ssh_admin_key_service_name: "ssh_add_root", name of the systemd main service
+* ssh_admin_key_service_keypath: "/root/.ssh/id_rsa_root", remote ssh key file location
+
+Usage
+-----
+
+```
+# create user's agent
+systemctl --user start ssh_user_agent.service
+# set the socket path in your environement
+export SSH_AUTH_SOCK="/tmp/ssh-agent.$(whoami).socket"
+# finally *** as regular user *** load the private key to your ssh-agent 
+systemctl start "ssh_add_root@$(whoami).service"
+ssh-add -l
+# 4096 SHA256:cbHy59r0xtkKbrZy3KmwbS980h7MYKZ2BHyBPKz+gas test daemon (RSA)
+```
 
 Dependencies
 ------------
 
-A list of other roles hosted on Galaxy should go here, plus any details in regards to parameters that may need to be set for other roles, or variables that are used from other roles.
+N/A
 
 Example Playbook
 ----------------
 
-Including an example of how to use your role (for instance, with variables passed in as parameters) is always nice for users too:
-
     - hosts: servers
       roles:
-         - { role: username.rolename, x: 42 }
+         - { role: ssh_admin_key_service }
 
 License
 -------
 
 BSD
 
-Author Information
-------------------
 
-An optional section for the role authors to include contact information, or a website (HTML is not allowed).

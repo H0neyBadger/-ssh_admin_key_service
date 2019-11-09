@@ -1,0 +1,119 @@
+module admin_ssh_add_{{ ssh_admin_key_service_id }} 1.0;
+
+# the aim of this module 
+# is to keep ssh keys confined 
+# to unconfined users 
+
+# only init_t can preform a transition 
+# to ssh key type
+
+require {
+    role system_r;
+    type init_t;
+    type bin_t;
+    type null_device_t;
+    type ld_so_t;
+    type root_t;
+    type lib_t;
+    type etc_t;
+    type usr_t;
+    type ld_so_cache_t;
+    type admin_home_t;
+    type cert_t;
+    type device_t;
+    type security_t;
+    type selinux_config_t;
+    type ssh_home_t;
+    type sssd_public_t;
+    type sssd_t;
+    type sssd_var_lib_t;
+    type sysfs_t;
+    type tmp_t;
+    type user_tmp_t;
+    type var_lib_t;
+    type var_run_t;
+    type var_t;
+    type unconfined_t;
+    type fs_t;
+    class process transition;
+    class file { entrypoint map read open ioctl getattr execute relabelto unlink setattr };
+    class chr_file { read write open };
+    class dir { search getattr read };
+    class fd { use };
+    class unix_stream_socket { read write };
+    class lnk_file read;
+    class unix_stream_socket { connect create getattr read write connectto };
+    class filesystem { getattr associate };
+    class capability dac_override;
+    class sock_file write;
+}
+
+# create the ssh key type
+type {{ ssh_admin_key_service_setype }};
+
+###########
+# Ansible #
+###########
+# allow unconfined_service_t to read ssh key
+# assuming that the ansible user is unconfined_t
+allow unconfined_t {{ ssh_admin_key_service_setype }} : file { relabelto getattr unlink setattr };
+allow {{ ssh_admin_key_service_setype }} fs_t : filesystem associate;
+
+###########
+# systemd #
+###########
+# allow setexeccon 
+role system_r types {{ ssh_admin_key_service_setype }};
+allow init_t {{ ssh_admin_key_service_setype }} : process transition;
+
+# allow {{ ssh_admin_key_service_setype }} to exec ssh-add (bin_t)
+allow {{ ssh_admin_key_service_setype }} bin_t : file entrypoint;
+
+# allow ssh-add exec
+allow {{ ssh_admin_key_service_setype }} bin_t : file { map read execute };
+allow {{ ssh_admin_key_service_setype }} null_device_t : chr_file { read write open }; 
+allow {{ ssh_admin_key_service_setype }} ld_so_t : file { map read execute };
+allow {{ ssh_admin_key_service_setype }} lib_t : lnk_file read;
+allow {{ ssh_admin_key_service_setype }} lib_t : dir { getattr search read };
+allow {{ ssh_admin_key_service_setype }} lib_t : file { read open getattr map execute };
+allow {{ ssh_admin_key_service_setype }} etc_t : dir search;
+allow {{ ssh_admin_key_service_setype }} usr_t : dir search;
+allow {{ ssh_admin_key_service_setype }} ld_so_cache_t : file { read open getattr map };
+allow {{ ssh_admin_key_service_setype }} admin_home_t : dir search;
+allow {{ ssh_admin_key_service_setype }} cert_t : dir search;
+allow {{ ssh_admin_key_service_setype }} cert_t : file { getattr open read };
+allow {{ ssh_admin_key_service_setype }} device_t : dir search;
+allow {{ ssh_admin_key_service_setype }} etc_t : file { getattr open read };
+allow {{ ssh_admin_key_service_setype }} etc_t : lnk_file read;
+allow {{ ssh_admin_key_service_setype }} security_t : filesystem getattr;
+allow {{ ssh_admin_key_service_setype }} self : capability dac_override;
+allow {{ ssh_admin_key_service_setype }} self : unix_stream_socket { connect create getattr read write };
+allow {{ ssh_admin_key_service_setype }} selinux_config_t : dir search;
+allow {{ ssh_admin_key_service_setype }} ssh_home_t : dir search;
+allow {{ ssh_admin_key_service_setype }} ssh_home_t : file { getattr open read };
+allow {{ ssh_admin_key_service_setype }} sssd_public_t : dir search;
+allow {{ ssh_admin_key_service_setype }} sssd_public_t : file { getattr map open read };
+allow {{ ssh_admin_key_service_setype }} sssd_t : unix_stream_socket connectto;
+allow {{ ssh_admin_key_service_setype }} sssd_var_lib_t : dir search;
+allow {{ ssh_admin_key_service_setype }} sssd_var_lib_t : sock_file write;
+allow {{ ssh_admin_key_service_setype }} sysfs_t : dir search;
+allow {{ ssh_admin_key_service_setype }} tmp_t : dir search;
+allow {{ ssh_admin_key_service_setype }} unconfined_t : unix_stream_socket connectto;
+allow {{ ssh_admin_key_service_setype }} user_tmp_t : sock_file write;
+allow {{ ssh_admin_key_service_setype }} usr_t : file { getattr open read };
+allow {{ ssh_admin_key_service_setype }} var_lib_t : dir search;
+allow {{ ssh_admin_key_service_setype }} var_run_t : dir search;
+allow {{ ssh_admin_key_service_setype }} var_run_t : lnk_file read;
+allow {{ ssh_admin_key_service_setype }} var_t : dir search;
+
+# allow systemd to monitor {{ ssh_admin_key_service_setype }} 
+allow init_t {{ ssh_admin_key_service_setype }} : dir { search };
+allow init_t {{ ssh_admin_key_service_setype }} : file { read open ioctl getattr };
+allow {{ ssh_admin_key_service_setype }} init_t : fd use;
+allow {{ ssh_admin_key_service_setype }} init_t : unix_stream_socket { read write getattr };
+
+# allow ssh key reading
+allow {{ ssh_admin_key_service_setype }} root_t : dir search;
+allow {{ ssh_admin_key_service_setype }} self : file { read open getattr };
+
+
